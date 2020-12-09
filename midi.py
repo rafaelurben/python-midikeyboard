@@ -92,7 +92,11 @@ class MIDIKeyboard(tk.Frame):
         self._canvas.tag_raise("blackkey")
         self._keys_inverted = {v: k for k, v in self._keys.items()}
 
-        self._tkinter_last_keyid = None
+        self._tkinter_last_mouse_keyid = None
+        
+        self._tkinter_keys_pressed = []
+
+        self.no_key_spam = True
 
     # UI Updates
 
@@ -118,7 +122,7 @@ class MIDIKeyboard(tk.Frame):
         if self._midi_out:
             self._midi_out.write_short(0xb0 + channel, 64, velocity)
 
-    # Tkinter Events
+    # Tkinter Utils
 
     def _tkinter_get_key_at_pos(self, event):
         if event.x >= 0 and event.x <= self._width and event.y >= 0 and event.y <= self._height:
@@ -127,32 +131,38 @@ class MIDIKeyboard(tk.Frame):
         else:
             return None
 
+    # Tkinter Events
+
     def _tkinter_mouse_pressed(self, event):
         keyid = self._tkinter_get_key_at_pos(event)
         self._update_key(keyid, True)
-        self._tkinter_last_keyid = keyid
+        self._tkinter_last_mouse_keyid = keyid
 
     def _tkinter_mouse_released(self, event):
-        self._update_key(self._tkinter_last_keyid, False)
+        self._update_key(self._tkinter_last_mouse_keyid, False)
 
     def _tkinter_motion(self, event):
         keyid = self._tkinter_get_key_at_pos(event)
-        if not self._tkinter_last_keyid == keyid:
-            self._update_key(self._tkinter_last_keyid, False)
-            self._tkinter_last_keyid = keyid
-            self._update_key(self._tkinter_last_keyid, True)
+        if not self._tkinter_last_mouse_keyid == keyid:
+            self._update_key(self._tkinter_last_mouse_keyid, False)
+            self._tkinter_last_mouse_keyid = keyid
+            self._update_key(self._tkinter_last_mouse_keyid, True)
 
     def _tkinter_key_pressed(self, event):
-        if event.char in self.KEYS_TO_ID:
-            self._update_key(self.KEYS_TO_ID[event.char], True)
-        elif event.char == self.KEY_SUSTAIN:
-            self._update_sustain(127)
+        if not event.char in self._tkinter_keys_pressed:
+            self._tkinter_keys_pressed.append(event.char)
+            if event.char in self.KEYS_TO_ID:
+                self._update_key(self.KEYS_TO_ID[event.char], True)
+            elif event.char == self.KEY_SUSTAIN:
+                self._update_sustain(127)
 
     def _tkinter_key_released(self, event):
-        if event.char in self.KEYS_TO_ID:
-            self._update_key(self.KEYS_TO_ID[event.char], False)
-        elif event.char == self.KEY_SUSTAIN:
-            self._update_sustain(0)
+        if event.char in self._tkinter_keys_pressed:
+            self._tkinter_keys_pressed.remove(event.char)
+            if event.char in self.KEYS_TO_ID:
+                self._update_key(self.KEYS_TO_ID[event.char], False)
+            elif event.char == self.KEY_SUSTAIN:
+                self._update_sustain(0)
 
     # Midi Events
 
@@ -185,6 +195,7 @@ class MIDIKeyboard(tk.Frame):
         except midi.MidiException as e:
             if ignoreerror:
                 self._midi_in = None
+                print("No MIDI In!", e)
             else:
                 raise e
 
@@ -195,6 +206,7 @@ class MIDIKeyboard(tk.Frame):
             self._midi_out.set_instrument(0)
         except (midi.MidiException, Exception) as e:
             if ignoreerror:
+                print("No MIDI Out!", e)
                 self._midi_out = None
             else:
                 raise e
