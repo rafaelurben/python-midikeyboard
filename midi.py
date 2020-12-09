@@ -28,6 +28,7 @@ class MIDIKeyboard(tk.Frame):
         "t": 6,
         "g": 7,
         "z": 8,
+        "y": 8,
         "h": 9,
         "u": 10,
         "j": 11,
@@ -36,6 +37,7 @@ class MIDIKeyboard(tk.Frame):
         "l": 14,
         "p": 15,
         "ö": 16,
+        ":": 16,
     }
     KEY_SUSTAIN = " "
     KEY_OCTAVE_UP = "m"
