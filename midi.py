@@ -19,21 +19,27 @@ class MIDIKeyboard(tk.Frame):
     HIGHEST_KEY = 120
 
     KEYS_TO_ID = {
-        "a": 48,
-        "w": 49,
-        "s": 50,
-        "e": 51,
-        "d": 52,
-        "f": 53,
-        "t": 54,
-        "g": 55,
-        "z": 56,
-        "h": 57,
-        "u": 58,
-        "j": 59,
-        "k": 60,
+        "a": 0,
+        "w": 1,
+        "s": 2,
+        "e": 3,
+        "d": 4,
+        "f": 5,
+        "t": 6,
+        "g": 7,
+        "z": 8,
+        "h": 9,
+        "u": 10,
+        "j": 11,
+        "k": 12,
+        "o": 13,
+        "l": 14,
+        "p": 15,
+        "ö": 16,
     }
     KEY_SUSTAIN = " "
+    KEY_OCTAVE_UP = "m"
+    KEY_OCTAVE_DOWN = "n"
 
     # Checks
 
@@ -95,6 +101,7 @@ class MIDIKeyboard(tk.Frame):
         self._tkinter_last_mouse_keyid = None
         
         self._tkinter_keys_pressed = []
+        self._tkinter_key_octave = 4
 
         self.no_key_spam = True
 
@@ -152,15 +159,19 @@ class MIDIKeyboard(tk.Frame):
         if not event.char in self._tkinter_keys_pressed:
             self._tkinter_keys_pressed.append(event.char)
             if event.char in self.KEYS_TO_ID:
-                self._update_key(self.KEYS_TO_ID[event.char], True)
+                self._update_key((self._tkinter_key_octave*self.KEYS_PER_OCTAVE)+self.KEYS_TO_ID[event.char], True)
             elif event.char == self.KEY_SUSTAIN:
                 self._update_sustain(127)
+            elif event.char == self.KEY_OCTAVE_UP and self._tkinter_key_octave < 10:
+                self._tkinter_key_octave += 1 
+            elif event.char == self.KEY_OCTAVE_DOWN and self._tkinter_key_octave > 0:
+                self._tkinter_key_octave -= 1
 
     def _tkinter_key_released(self, event):
         if event.char in self._tkinter_keys_pressed:
             self._tkinter_keys_pressed.remove(event.char)
             if event.char in self.KEYS_TO_ID:
-                self._update_key(self.KEYS_TO_ID[event.char], False)
+                self._update_key((self._tkinter_key_octave*self.KEYS_PER_OCTAVE)+self.KEYS_TO_ID[event.char], False)
             elif event.char == self.KEY_SUSTAIN:
                 self._update_sustain(0)
 
