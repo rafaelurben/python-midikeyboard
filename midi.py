@@ -1,6 +1,13 @@
 import tkinter as tk
+import colorsys
 from pygame import midi
 
+def hsv_to_rgbstr(h, s=1, v=1):
+    rgb = colorsys.hsv_to_rgb(h/360, s, v)
+    rgbstr = "#"
+    for i in rgb:
+        rgbstr += hex(int(i*255)).split("x")[1].zfill(2)
+    return rgbstr
 
 class MIDIKeyboard(tk.Frame):
     MIDI_STATE_PRESSED = 144
@@ -117,7 +124,7 @@ class MIDIKeyboard(tk.Frame):
         elif keyid >= self.LOWEST_KEY and keyid <= self.HIGHEST_KEY:
             if keyid in self._keys:
                 self._canvas.itemconfig(
-                    self._keys[keyid], fill=f"#00ff{color}" if pressed else "#000000" if self._key_is_black(keyid) else "#ffffff")
+                    self._keys[keyid], fill=hsv_to_rgbstr(h=velocity*1.75) if pressed else "#000000" if self._key_is_black(keyid) else "#ffffff")
             if self._midi_out:
                 if pressed:
                     self._midi_out.note_on(keyid, velocity)
