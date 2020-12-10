@@ -67,35 +67,53 @@ class MIDIKeyboard(tk.Frame):
         self._root.bind('<KeyPress>', self._tkinter_key_pressed)
         self._root.bind('<KeyRelease>', self._tkinter_key_released)
 
+        self._octave_start = octave_start
+        self._octave_count = octaves
+
         self._height = height
-        self._width = width or ((octaves*self.WHITE_KEYS_PER_OCTAVE) * 30)
-        width_per_key = int(self._width/(octaves*self.WHITE_KEYS_PER_OCTAVE))
+        self._width = width or (
+            (self._octave_count*self.WHITE_KEYS_PER_OCTAVE) * 30)
+        self._width_per_key = int(
+            self._width/(self._octave_count*self.WHITE_KEYS_PER_OCTAVE))
 
         self._canvas = tk.Canvas(
             root, width=self._width, height=self._height, bg="#FFFFFF")
         self._canvas.pack(side="top", fill="both", expand=True)
 
+        self._draw_keyboard()
+
+        self._tkinter_mouse_last_keyid = None
+        
+        self._tkinter_keys_pressed = []
+        self._tkinter_key_octave = octave_start
+
+        self._tkinter_key_volume = 64
+
+        self.no_key_spam = True
+
+    def _draw_keyboard(self):
+        self._canvas.delete("all")
         self._keys = {}
 
-        for o in range(octaves):
+        for o in range(self._octave_count):
             bk = 0
             for k in range(self.KEYS_PER_OCTAVE):
-                keyid = ((octave_start+o)*self.KEYS_PER_OCTAVE)+k
+                keyid = ((self._octave_start+o)*self.KEYS_PER_OCTAVE)+k
 
                 if self._key_is_black(k):
                     x_start = int(
-                        (o*self.WHITE_KEYS_PER_OCTAVE+(k-0.25-bk))*width_per_key)
+                        (o*self.WHITE_KEYS_PER_OCTAVE+(k-0.25-bk))*self._width_per_key)
                     x_end = int((o*self.WHITE_KEYS_PER_OCTAVE +
-                                 (k+0.25-bk))*width_per_key)
+                                 (k+0.25-bk))*self._width_per_key)
 
                     rectid = self._canvas.create_rectangle(
                         x_start, 0, x_end, self._height/2, fill="#000000", outline="#000000", tags=f"key blackkey key_{keyid}")
                     bk += 1
                 else:
                     x_start = int(
-                        (o*self.WHITE_KEYS_PER_OCTAVE+(k-bk))*width_per_key)
+                        (o*self.WHITE_KEYS_PER_OCTAVE+(k-bk))*self._width_per_key)
                     x_end = int(
-                        (o*self.WHITE_KEYS_PER_OCTAVE+(k+1-bk))*width_per_key)
+                        (o*self.WHITE_KEYS_PER_OCTAVE+(k+1-bk))*self._width_per_key)
                     rectid = self._canvas.create_rectangle(
                         x_start, 0, x_end, self._height, fill="#FFFFFF", outline="#000000", tags=f"key whitekey key_{keyid}")
 
@@ -109,20 +127,6 @@ class MIDIKeyboard(tk.Frame):
 
         self._canvas.tag_raise("blackkey")
         self._keys_inverted = {v: k for k, v in self._keys.items()}
-
-        self._tkinter_mouse_last_keyid = None
-        
-        self._tkinter_keys_pressed = []
-        self._tkinter_key_octave = octave_start
-
-        self._tkinter_key_volume = 64
-
-        self.no_key_spam = True
-
-    def draw_keyboard(self):
-        if self._canvas:
-            self._canvas.delete()
-        
 
     # UI Updates
 
