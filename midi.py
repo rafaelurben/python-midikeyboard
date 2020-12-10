@@ -46,9 +46,12 @@ class MIDIKeyboard(tk.Frame):
         "ö": 16,
         ":": 16,
     }
+    KEYS_OCTAVE = list(str(i) for i in range(10))
     KEY_SUSTAIN = " "
     KEY_OCTAVE_UP = "m"
     KEY_OCTAVE_DOWN = "n"
+    KEY_VOLUME_UP = "c"
+    KEY_VOLUME_DOWN = "v"
 
     # Checks
 
@@ -102,23 +105,29 @@ class MIDIKeyboard(tk.Frame):
                 self._canvas.tag_bind(
                     rectid, "<ButtonRelease-1>", self._tkinter_mouse_released)
                 self._canvas.tag_bind(
-                    rectid, "<B1-Motion>", self._tkinter_motion)
+                    rectid, "<B1-Motion>", self._tkinter_mouse_motion)
 
         self._canvas.tag_raise("blackkey")
         self._keys_inverted = {v: k for k, v in self._keys.items()}
 
-        self._tkinter_last_mouse_keyid = None
+        self._tkinter_mouse_last_keyid = None
         
         self._tkinter_keys_pressed = []
-        self._tkinter_key_octave = 4
+        self._tkinter_key_octave = octave_start
+
+        self._tkinter_key_volume = 64
 
         self.no_key_spam = True
+
+    def draw_keyboard(self):
+        if self._canvas:
+            self._canvas.delete()
+        
 
     # UI Updates
 
     def _update_key(self, keyid, pressed, velocity=127):
         print("Key", keyid, pressed, velocity)
-        color = hex(255-(velocity*2)).split("x")[1].zfill(2)
         if keyid is None:
             return
         elif keyid >= self.LOWEST_KEY and keyid <= self.HIGHEST_KEY:
@@ -151,30 +160,36 @@ class MIDIKeyboard(tk.Frame):
 
     def _tkinter_mouse_pressed(self, event):
         keyid = self._tkinter_get_key_at_pos(event)
-        self._update_key(keyid, True)
-        self._tkinter_last_mouse_keyid = keyid
+        self._update_key(keyid, True, self._tkinter_key_volume)
+        self._tkinter_mouse_last_keyid = keyid
 
     def _tkinter_mouse_released(self, event):
-        self._update_key(self._tkinter_last_mouse_keyid, False)
+        self._update_key(self._tkinter_mouse_last_keyid, False)
 
-    def _tkinter_motion(self, event):
+    def _tkinter_mouse_motion(self, event):
         keyid = self._tkinter_get_key_at_pos(event)
-        if not self._tkinter_last_mouse_keyid == keyid:
-            self._update_key(self._tkinter_last_mouse_keyid, False)
-            self._tkinter_last_mouse_keyid = keyid
-            self._update_key(self._tkinter_last_mouse_keyid, True)
+        if not self._tkinter_mouse_last_keyid == keyid:
+            self._update_key(self._tkinter_mouse_last_keyid, False)
+            self._tkinter_mouse_last_keyid = keyid
+            self._update_key(self._tkinter_mouse_last_keyid, True, self._tkinter_key_volume)
 
     def _tkinter_key_pressed(self, event):
         if not event.char in self._tkinter_keys_pressed:
             self._tkinter_keys_pressed.append(event.char)
             if event.char in self.KEYS_TO_ID:
-                self._update_key((self._tkinter_key_octave*self.KEYS_PER_OCTAVE)+self.KEYS_TO_ID[event.char], True)
+                self._update_key((self._tkinter_key_octave*self.KEYS_PER_OCTAVE)+self.KEYS_TO_ID[event.char], True, self._tkinter_key_volume)
+            elif event.char in self.KEYS_OCTAVE:
+                self._tkinter_key_octave = int(event.char)
             elif event.char == self.KEY_SUSTAIN:
                 self._update_sustain(127)
             elif event.char == self.KEY_OCTAVE_UP and self._tkinter_key_octave < 10:
                 self._tkinter_key_octave += 1 
             elif event.char == self.KEY_OCTAVE_DOWN and self._tkinter_key_octave > 0:
                 self._tkinter_key_octave -= 1
+            elif event.char == self.KEY_VOLUME_UP and self._tkinter_key_volume <= 117:
+                self._tkinter_key_volume += 10
+            elif event.char == self.KEY_VOLUME_DOWN and self._tkinter_key_volume >= 10:
+                self._tkinter_key_volume -= 10
 
     def _tkinter_key_released(self, event):
         if event.char in self._tkinter_keys_pressed:
