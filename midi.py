@@ -14,8 +14,8 @@ class MIDIKeyboard(tk.Frame):
     MIDI_STATE_RELEASED = 128
     MIDI_STATE_SUSTAIN = 176
 
-    BLACK_KEYS = [1, 3, 6, 8, 10]
-    WHITE_KEYS = [0, 2, 4, 5, 7, 9, 11]
+    BLACK_KEYS = {1: "c#", 3: "d#", 6: "f#", 8: "g#", 10: "a#"}
+    WHITE_KEYS = {0: "c", 2: "d", 4: "e", 5: "f", 7: "g", 9: "a", 11: "h"}
 
     WHITE_KEYS_PER_OCTAVE = len(WHITE_KEYS)
     BLACK_KEYS_PER_OCTAVE = len(BLACK_KEYS)
@@ -64,21 +64,18 @@ class MIDIKeyboard(tk.Frame):
         super().__init__(root)
 
         self._root = root
-        self._root.bind('<KeyPress>', self._tkinter_key_pressed)
-        self._root.bind('<KeyRelease>', self._tkinter_key_released)
+        self._root.bind('<KeyPress>', self._tkinter_event_key_pressed)
+        self._root.bind('<KeyRelease>', self._tkinter_event_key_released)
 
         self._octave_start = octave_start
         self._octave_count = octaves
 
-        self._height = height
-        self._width = width or (
-            (self._octave_count*self.WHITE_KEYS_PER_OCTAVE) * 30)
-        self._width_per_key = int(
-            self._width/(self._octave_count*self.WHITE_KEYS_PER_OCTAVE))
+        self._update_size(width, height)
 
         self._canvas = tk.Canvas(
-            root, width=self._width, height=self._height, bg="#FFFFFF")
+            root, bg="#FFFFFF", width=self._width, height=self._height)
         self._canvas.pack(side="top", fill="both", expand=True)
+        self._canvas.bind('<Configure>', self._tkinter_event_resize)
 
         self._draw_keyboard()
 
@@ -90,6 +87,13 @@ class MIDIKeyboard(tk.Frame):
         self._tkinter_key_volume = 64
 
         self.no_key_spam = True
+
+    def _update_size(self, width=None, height=200):
+        self._height = height
+        self._width = width or (
+            (self._octave_count*self.WHITE_KEYS_PER_OCTAVE) * 30)
+        self._width_per_key = int(
+            self._width/(self._octave_count*self.WHITE_KEYS_PER_OCTAVE))
 
     def _draw_keyboard(self):
         self._canvas.delete("all")
@@ -119,11 +123,11 @@ class MIDIKeyboard(tk.Frame):
 
                 self._keys[keyid] = rectid
                 self._canvas.tag_bind(
-                    rectid, "<Button-1>", self._tkinter_mouse_pressed)
+                    rectid, "<Button-1>", self._tkinter_event_mouse_pressed)
                 self._canvas.tag_bind(
-                    rectid, "<ButtonRelease-1>", self._tkinter_mouse_released)
+                    rectid, "<ButtonRelease-1>", self._tkinter_event_mouse_released)
                 self._canvas.tag_bind(
-                    rectid, "<B1-Motion>", self._tkinter_mouse_motion)
+                    rectid, "<B1-Motion>", self._tkinter_event_mouse_motion)
 
         self._canvas.tag_raise("blackkey")
         self._keys_inverted = {v: k for k, v in self._keys.items()}
@@ -162,22 +166,22 @@ class MIDIKeyboard(tk.Frame):
 
     # Tkinter Events
 
-    def _tkinter_mouse_pressed(self, event):
+    def _tkinter_event_mouse_pressed(self, event):
         keyid = self._tkinter_get_key_at_pos(event)
         self._update_key(keyid, True, self._tkinter_key_volume)
         self._tkinter_mouse_last_keyid = keyid
 
-    def _tkinter_mouse_released(self, event):
+    def _tkinter_event_mouse_released(self, event):
         self._update_key(self._tkinter_mouse_last_keyid, False)
 
-    def _tkinter_mouse_motion(self, event):
+    def _tkinter_event_mouse_motion(self, event):
         keyid = self._tkinter_get_key_at_pos(event)
         if not self._tkinter_mouse_last_keyid == keyid:
             self._update_key(self._tkinter_mouse_last_keyid, False)
             self._tkinter_mouse_last_keyid = keyid
             self._update_key(self._tkinter_mouse_last_keyid, True, self._tkinter_key_volume)
 
-    def _tkinter_key_pressed(self, event):
+    def _tkinter_event_key_pressed(self, event):
         if not event.char in self._tkinter_keys_pressed:
             self._tkinter_keys_pressed.append(event.char)
             if event.char in self.KEYS_TO_ID:
@@ -195,13 +199,18 @@ class MIDIKeyboard(tk.Frame):
             elif event.char == self.KEY_VOLUME_DOWN and self._tkinter_key_volume >= 10:
                 self._tkinter_key_volume -= 10
 
-    def _tkinter_key_released(self, event):
+    def _tkinter_event_key_released(self, event):
         if event.char in self._tkinter_keys_pressed:
             self._tkinter_keys_pressed.remove(event.char)
             if event.char in self.KEYS_TO_ID:
                 self._update_key((self._tkinter_key_octave*self.KEYS_PER_OCTAVE)+self.KEYS_TO_ID[event.char], False)
             elif event.char == self.KEY_SUSTAIN:
                 self._update_sustain(0)
+
+    def _tkinter_event_resize(self, event):
+        if event.width != self._width or event.height != self._height:
+            self._update_size(width=event.width, height=event.height)
+            self._draw_keyboard()
 
     # Midi Events
 
